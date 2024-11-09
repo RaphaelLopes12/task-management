@@ -64,3 +64,74 @@ exports.deleteTask = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.addComment = async (req, res) => {
+    const { projectId, taskId } = req.params;
+    const { text } = req.body;
+
+    try {
+        const task = await Task.findOne({ _id: taskId, project: projectId });
+
+        if (!task) {
+            return res.status(404).json({ message: 'Tarefa não encontrada' });
+        }
+
+        const comment = {
+            text,
+            user: req.user._id,
+        };
+
+        task.comments.push(comment);
+        await task.save();
+
+        res.status(201).json({ message: 'Comentário adicionado com sucesso', comment });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getComments = async (req, res) => {
+    const { projectId, taskId } = req.params;
+
+    try {
+        const task = await Task.findOne({ _id: taskId, project: projectId }).populate('comments.user', 'name email');
+
+        if (!task) {
+            return res.status(404).json({ message: 'Tarefa não encontrada' });
+        }
+
+        res.json(task.comments);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.editComment = async (req, res) => {
+    const { projectId, taskId, commentId } = req.params;
+    const { text } = req.body;
+
+    try {
+        const task = await Task.findOne({ _id: taskId, project: projectId });
+
+        if (!task) {
+            return res.status(404).json({ message: 'Tarefa não encontrada' });
+        }
+
+        const comment = task.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: 'Comentário não encontrado' });
+        }
+
+        if (comment.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Você não tem permissão para editar este comentário' });
+        }
+
+        comment.text = text || comment.text;
+        await task.save();
+
+        res.json({ message: 'Comentário atualizado com sucesso', comment });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

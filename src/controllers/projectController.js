@@ -83,6 +83,13 @@ exports.addCollaborator = async (req, res) => {
         if (!project.collaborators.includes(collaborator._id)) {
             project.collaborators.push(collaborator._id);
             await project.save();
+
+            req.io.emit('newCollaborator', {
+                projectId: project._id,
+                collaborator,
+                message: `Novo colaborador adicionado ao projeto ${project.title}`
+            });
+
             res.json({ message: 'Colaborador adicionado com sucesso' });
         } else {
             res.status(400).json({ message: 'Colaborador já está no projeto' });
@@ -107,6 +114,12 @@ exports.removeCollaborator = async (req, res) => {
             (id) => id.toString() !== collaboratorId
         );
         await project.save();
+
+        req.io.emit('removeCollaborator', {
+            projectId: project._id,
+            collaboratorId,
+            message: `Colaborador removido do projeto ${project.title}`
+        });
 
         res.json({ message: 'Colaborador removido com sucesso' });
     } catch (error) {

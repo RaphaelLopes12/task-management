@@ -11,6 +11,12 @@ exports.createTask = async (req, res) => {
             project: projectId,
         });
 
+        req.io.emit('newTask', {
+            projectId,
+            task,
+            message: `Nova tarefa criada: ${task.title}`
+        });
+
         res.status(201).json(task);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -86,6 +92,12 @@ exports.addComment = async (req, res) => {
         const populatedTask = await Task.findById(taskId).populate('comments.user', 'name');
         const savedComment = populatedTask.comments[populatedTask.comments.length - 1];
 
+        req.io.emit('newComment', {
+            taskId: task._id,
+            comment: savedComment,
+            message: `Novo comentário na tarefa ${task.title}`
+        });
+
         res.status(200).json(savedComment);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -133,6 +145,12 @@ exports.editComment = async (req, res) => {
         const populatedTask = await Task.findById(taskId).populate('comments.user', 'name');
         const updatedComment = populatedTask.comments.id(commentId);
 
+        req.io.emit('editComment', {
+            taskId: task._id,
+            comment: updatedComment,
+            message: `Comentário atualizado na tarefa ${task.title}`
+        });
+
         res.json({ message: 'Comentário atualizado com sucesso', comment: updatedComment });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -155,6 +173,12 @@ exports.deleteComment = async (req, res) => {
 
         task.comments.pull(commentId);
         await task.save();
+
+        req.io.emit('deleteComment', {
+            taskId: task._id,
+            comment,
+            message: `Comentário removido da tarefa ${task.title}`
+        });
 
         res.json({ message: 'Comentário excluído com sucesso' });
     } catch (error) {

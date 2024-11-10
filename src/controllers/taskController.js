@@ -66,12 +66,11 @@ exports.deleteTask = async (req, res) => {
 };
 
 exports.addComment = async (req, res) => {
-    const { projectId, taskId } = req.params;
+    const { taskId } = req.params;
     const { text } = req.body;
 
     try {
-        const task = await Task.findOne({ _id: taskId, project: projectId });
-
+        const task = await Task.findById(taskId);
         if (!task) {
             return res.status(404).json({ message: 'Tarefa não encontrada' });
         }
@@ -84,17 +83,20 @@ exports.addComment = async (req, res) => {
         task.comments.push(comment);
         await task.save();
 
-        res.status(201).json({ message: 'Comentário adicionado com sucesso', comment });
+        const populatedTask = await Task.findById(taskId).populate('comments.user', 'name');
+        const savedComment = populatedTask.comments[populatedTask.comments.length - 1];
+
+        res.status(200).json(savedComment);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
 exports.getComments = async (req, res) => {
-    const { projectId, taskId } = req.params;
+    const { taskId } = req.params;
 
     try {
-        const task = await Task.findOne({ _id: taskId, project: projectId }).populate('comments.user', 'name email');
+        const task = await Task.findById(taskId).populate('comments.user', 'name email');
 
         if (!task) {
             return res.status(404).json({ message: 'Tarefa não encontrada' });
@@ -107,18 +109,16 @@ exports.getComments = async (req, res) => {
 };
 
 exports.editComment = async (req, res) => {
-    const { projectId, taskId, commentId } = req.params;
+    const { taskId, commentId } = req.params;
     const { text } = req.body;
 
     try {
-        const task = await Task.findOne({ _id: taskId, project: projectId });
-
+        const task = await Task.findById(taskId);
         if (!task) {
             return res.status(404).json({ message: 'Tarefa não encontrada' });
         }
 
         const comment = task.comments.id(commentId);
-
         if (!comment) {
             return res.status(404).json({ message: 'Comentário não encontrado' });
         }
@@ -130,7 +130,33 @@ exports.editComment = async (req, res) => {
         comment.text = text || comment.text;
         await task.save();
 
-        res.json({ message: 'Comentário atualizado com sucesso', comment });
+        const populatedTask = await Task.findById(taskId).populate('comments.user', 'name');
+        const updatedComment = populatedTask.comments.id(commentId);
+
+        res.json({ message: 'Comentário atualizado com sucesso', comment: updatedComment });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.deleteComment = async (req, res) => {
+    const { taskId, commentId } = req.params;
+
+    try {
+        const task = await Task.findById(taskId);
+        if (!task) {
+            return res.status(404).json({ message: 'Tarefa não encontrada' });
+        }
+
+        const comment = task.comments.id(commentId);
+        if (!comment) {
+            return res.status(404).json({ message: 'Comentário não encontrado' });
+        }
+
+        task.comments.pull(commentId);
+        await task.save();
+
+        res.json({ message: 'Comentário excluído com sucesso' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -9,7 +9,8 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: "http://localhost:3000",
+        //origin: "http://localhost:3000", //rodar local
+        origin: "https://task-management-frontend-topaz.vercel.app",
         methods: ["GET", "POST"]
     }
 });
@@ -17,7 +18,12 @@ const io = socketIo(server, {
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: "https://task-management-frontend-topaz.vercel.app",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true
+}));
+
 app.use(express.json());
 io.on('connection', (socket) => {
     console.log('Novo cliente conectado:', socket.id);
